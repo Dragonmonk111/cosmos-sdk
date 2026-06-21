@@ -1,0 +1,32 @@
+syntax = "proto3";
+package cosmos.crypto.hybrid;
+
+import "amino/amino.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/crypto/keys/hybrid";
+
+// PubKey is a Project Aegis (ADR-007 §D3) hybrid account public key: a
+// secp256k1 AND ML-DSA-44 (FIPS 204) key at once. A signature is valid only if
+// BOTH halves verify, so an account is forgeable only if BOTH primitives break.
+//
+// Key is the concatenation secp256k1-compressed(33) || ml-dsa-44(1312) = 1345
+// bytes. The Amino encoding is simply the inner bytes field (key_field), exactly
+// like cosmos.crypto.secp256k1.PubKey, so it plugs into the existing codec path.
+message PubKey {
+  option (amino.name)                 = "juno/PubKeyHybridSecp256k1MlDsa44";
+  option (amino.message_encoding)     = "key_field";
+  option (gogoproto.goproto_stringer) = false;
+
+  bytes key = 1;
+}
+
+// PrivKey is the matching hybrid private key. Key is the concatenation
+// secp256k1-scalar(32) || ml-dsa-44-private. The two halves are reconstructed
+// on use; backups from an HD seed are reproducible.
+message PrivKey {
+  option (amino.name)             = "juno/PrivKeyHybridSecp256k1MlDsa44";
+  option (amino.message_encoding) = "key_field";
+
+  bytes key = 1;
+}
