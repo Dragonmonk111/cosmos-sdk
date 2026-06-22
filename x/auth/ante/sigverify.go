@@ -14,6 +14,7 @@ import (
 
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/hybrid"
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
@@ -420,6 +421,13 @@ func (vscd ValidateSigCountDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 	return next(ctx, tx, simulate)
 }
 
+// MlDsa44VerifyGasCost is the gas charged for the ML-DSA-44 half of a hybrid
+// signature verification, on top of the existing secp256k1 cost. ML-DSA-44
+// verify is heavier than secp256k1 (~101us vs the classical cost); this value
+// is provisional and intended to be locked after on-chain measurement on a
+// devnet (Project Aegis ADR-007 §D3 / §5.1 bandwidth-vs-CPU model).
+const MlDsa44VerifyGasCost = 5000
+
 // DefaultSigVerificationGasConsumer is the default implementation of SignatureVerificationGasConsumer. It consumes gas
 // for signature verification based upon the public key type. The cost is fetched from the given params and is matched
 // by the concrete type.
@@ -438,6 +446,14 @@ func DefaultSigVerificationGasConsumer(
 
 	case *secp256r1.PubKey:
 		meter.ConsumeGas(params.SigVerifyCostSecp256r1(), "ante verify: secp256r1")
+		return nil
+
+	case *hybrid.PubKey:
+		// Project Aegis hybrid (secp256k1 + ML-DSA-44): VerifySignature runs BOTH
+		// halves, so charge the secp256k1 cost plus a fixed ML-DSA-44 verify cost.
+		// MlDsa44VerifyGasCost is a provisional estimate pending on-chain
+		// measurement (ADR-007 §D3); ML-DSA-44 verify is integer-only/deterministic.
+		meter.ConsumeGas(params.SigVerifyCostSecp256k1+MlDsa44VerifyGasCost, "ante verify: hybrid-secp256k1-mldsa44")
 		return nil
 
 	case multisig.PubKey:

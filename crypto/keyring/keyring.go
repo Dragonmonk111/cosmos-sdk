@@ -202,7 +202,10 @@ func newKeystore(kr keyring.Keyring, cdc codec.Codec, backend string, opts ...Op
 	// Default options for keybase, these can be overwritten using the
 	// Option function
 	options := Options{
-		SupportedAlgos:       SigningAlgoList{hd.Secp256k1},
+		// hd.HybridSecp256k1MlDsa44 is the Project Aegis hybrid account key
+		// (secp256k1 + ML-DSA-44); it is added here so `keys add --algo
+		// hybrid-secp256k1-mldsa44` works out of the box on this fork.
+		SupportedAlgos:       SigningAlgoList{hd.Secp256k1, hd.HybridSecp256k1MlDsa44},
 		SupportedAlgosLedger: SigningAlgoList{hd.Secp256k1},
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/hybrid"
 	kmultisig "github.com/cosmos/cosmos-sdk/crypto/keys/multisig"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256r1"
@@ -123,6 +124,26 @@ func TestConsumeSignatureVerificationGas(t *testing.T) {
 			require.Equal(t, tt.gasConsumed, tt.args.meter.GasConsumed(), fmt.Sprintf("%d != %d", tt.gasConsumed, tt.args.meter.GasConsumed()))
 		}
 	}
+}
+
+// TestConsumeSignatureVerificationGasHybrid verifies the Project Aegis Phase D3
+// gas case: a hybrid (secp256k1 + ML-DSA-44) pubkey is recognized by the
+// default gas consumer and charged the secp256k1 cost plus the fixed ML-DSA-44
+// verify cost (both halves are verified in PubKey.VerifySignature).
+func TestConsumeSignatureVerificationGasHybrid(t *testing.T) {
+	params := types.DefaultParams()
+	hybridPriv, err := hybrid.GenPrivKey()
+	require.NoError(t, err)
+
+	meter := storetypes.NewInfiniteGasMeter()
+	sigV2 := signing.SignatureV2{
+		PubKey:   hybridPriv.PubKey(),
+		Sequence: 0,
+	}
+	require.NoError(t, ante.DefaultSigVerificationGasConsumer(meter, sigV2, params))
+
+	expected := params.SigVerifyCostSecp256k1 + ante.MlDsa44VerifyGasCost
+	require.Equal(t, expected, meter.GasConsumed())
 }
 
 func TestSigVerification(t *testing.T) {
