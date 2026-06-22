@@ -45,6 +45,13 @@ service Msg {
   // parameters.
   // Since: cosmos-sdk 0.47
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // RotateConsKey rotates the consensus public key of an existing validator.
+  //
+  // Project Aegis: this is the migration path that lets a live validator move
+  // its consensus key to a hybrid Ed25519 + ML-DSA-44 (FIPS 204) PQC key
+  // without re-creating the validator or losing delegations.
+  rpc RotateConsKey(MsgRotateConsKey) returns (MsgRotateConsKeyResponse);
 }
 
 // MsgCreateValidator defines a SDK message for creating a new validator.
@@ -204,3 +211,21 @@ message MsgUpdateParams {
 //
 // Since: cosmos-sdk 0.47
 message MsgUpdateParamsResponse {};
+
+// MsgRotateConsKey rotates the consensus public key of an existing validator.
+// The message is signed by the validator operator (validator_address); the new
+// consensus key is supplied as an Any packing a cosmos.crypto.PubKey (e.g. the
+// Project Aegis hybrid Ed25519+ML-DSA-44 key).
+message MsgRotateConsKey {
+  option (cosmos.msg.v1.signer) = "validator_address";
+  option (amino.name)           = "cosmos-sdk/MsgRotateConsKey";
+
+  option (gogoproto.equal)           = false;
+  option (gogoproto.goproto_getters) = false;
+
+  string              validator_address = 1 [(cosmos_proto.scalar) = "cosmos.ValidatorAddressString"];
+  google.protobuf.Any new_pubkey        = 2 [(cosmos_proto.accepts_interface) = "cosmos.crypto.PubKey"];
+}
+
+// MsgRotateConsKeyResponse defines the Msg/RotateConsKey response type.
+message MsgRotateConsKeyResponse {}

@@ -20,6 +20,8 @@ var (
 	_ sdk.Msg                            = &MsgBeginRedelegate{}
 	_ sdk.Msg                            = &MsgCancelUnbondingDelegation{}
 	_ sdk.Msg                            = &MsgUpdateParams{}
+	_ sdk.Msg                            = &MsgRotateConsKey{}
+	_ codectypes.UnpackInterfacesMessage = (*MsgRotateConsKey)(nil)
 )
 
 // NewMsgCreateValidator creates a new MsgCreateValidator instance.
@@ -91,6 +93,40 @@ func (msg MsgCreateValidator) Validate(ac address.Codec) error {
 func (msg MsgCreateValidator) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
 	var pubKey cryptotypes.PubKey
 	return unpacker.UnpackAny(msg.Pubkey, &pubKey)
+}
+
+// NewMsgRotateConsKey creates a new MsgRotateConsKey instance. It rotates the
+// consensus public key of the validator identified by valAddr to newPubKey
+// (Project Aegis: e.g. a hybrid Ed25519+ML-DSA-44 consensus key).
+func NewMsgRotateConsKey(valAddr string, newPubKey cryptotypes.PubKey) (*MsgRotateConsKey, error) {
+	var pkAny *codectypes.Any
+	if newPubKey != nil {
+		var err error
+		if pkAny, err = codectypes.NewAnyWithValue(newPubKey); err != nil {
+			return nil, err
+		}
+	}
+	return &MsgRotateConsKey{
+		ValidatorAddress: valAddr,
+		NewPubkey:        pkAny,
+	}, nil
+}
+
+// Validate validates the MsgRotateConsKey sdk msg.
+func (msg MsgRotateConsKey) Validate(ac address.Codec) error {
+	if _, err := ac.StringToBytes(msg.ValidatorAddress); err != nil {
+		return sdkerrors.ErrInvalidAddress.Wrapf("invalid validator address: %s", err)
+	}
+	if msg.NewPubkey == nil {
+		return ErrEmptyValidatorPubKey
+	}
+	return nil
+}
+
+// UnpackInterfaces implements UnpackInterfacesMessage.UnpackInterfaces
+func (msg MsgRotateConsKey) UnpackInterfaces(unpacker codectypes.AnyUnpacker) error {
+	var pubKey cryptotypes.PubKey
+	return unpacker.UnpackAny(msg.NewPubkey, &pubKey)
 }
 
 // NewMsgEditValidator creates a new MsgEditValidator instance

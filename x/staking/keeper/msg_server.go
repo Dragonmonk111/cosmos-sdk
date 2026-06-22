@@ -12,6 +12,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/math"
 
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -604,4 +605,102 @@ func (k msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 	}
 
 	return &types.MsgUpdateParamsResponse{}, nil
+}
+
+// RotateConsKey rotates the consensus public key of an existing validator.
+//
+// Project Aegis: this is the on-chain migration path that lets a live validator
+// move its consensus key to a hybrid Ed25519 + ML-DSA-44 (FIPS 204) PQC key
+// without re-creating the validator or losing delegations. It updates the
+// validator record and the consensus-address -> operator index.
+//
+// NOTE: this commits the rotation to staking state. Propagation to the
+// CometBFT validator set (the ABCI ValidatorUpdate that swaps the live key) and
+// the rotation-history/rate-limit queue are exercised on a running devnet and
+// are tracked as the gated portion of F6 (see AEGIS_CHANGES.md).
+func (k msgServer) RotateConsKey(ctx context.Context, msg *types.MsgRotateConsKey) (*types.MsgRotateConsKeyResponse, error) {
+	valAddr, err := k.validatorAddressCodec.StringToBytes(msg.ValidatorAddress)
+	if err != nil {
+		return nil, sdkerrors.ErrInvalidAddress.Wrapf("invalid validator address: %s", err)
+	}
+
+	if err := msg.Validate(k.validatorAddressCodec); err != nil {
+		return nil, err
+	}
+
+	validator, err := k.GetValidator(ctx, valAddr)
+	if err != nil {
+		return nil, types.ErrNoValidatorFound
+	}
+
+	newPk, ok := msg.NewPubkey.GetCachedValue().(cryptotypes.PubKey)
+	if !ok {
+		return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidType, "Expecting cryptotypes.PubKey, got %T", msg.NewPubkey.GetCachedValue())
+	}
+
+	// Reject if the new consensus key is already registered to a validator.
+	newConsAddr := sdk.GetConsAddress(newPk)
+	if _, err := k.GetValidatorByConsAddr(ctx, newConsAddr); err == nil {
+		return nil, types.ErrValidatorPubKeyExists
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	// Enforce the consensus-params allowed pubkey types (same gate as CreateValidator).
+	cp := sdkCtx.ConsensusParams()
+	if cp.Validator != nil {
+		pkType := newPk.Type()
+		hasKeyType := false
+		for _, keyType := range cp.Validator.PubKeyTypes {
+			if pkType == keyType {
+				hasKeyType = true
+				break
+			}
+		}
+		if !hasKeyType {
+			return nil, errorsmod.Wrapf(
+				types.ErrValidatorPubKeyTypeNotSupported,
+				"got: %s, expected: %s", newPk.Type(), cp.Validator.PubKeyTypes,
+			)
+		}
+	}
+
+	// Old consensus address, for index cleanup and the emitted event.
+	oldConsBz, err := validator.GetConsAddr()
+	if err != nil {
+		return nil, err
+	}
+	oldConsAddr := sdk.ConsAddress(oldConsBz)
+
+	pkAny, err := codectypes.NewAnyWithValue(newPk)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove the stale cons-addr -> operator index entry before writing the new one.
+	store := k.storeService.OpenKVStore(ctx)
+	if err := store.Delete(types.GetValidatorByConsAddrKey(oldConsAddr)); err != nil {
+		return nil, err
+	}
+
+	validator.ConsensusPubkey = pkAny
+
+	if err := k.SetValidator(ctx, validator); err != nil {
+		return nil, err
+	}
+	if err := k.SetValidatorByConsAddr(ctx, validator); err != nil {
+		return nil, err
+	}
+
+	sdkCtx.EventManager().EmitEvents(sdk.Events{
+		sdk.NewEvent(
+			types.EventTypeRotateConsKey,
+			sdk.NewAttribute(types.AttributeKeyValidator, msg.ValidatorAddress),
+			sdk.NewAttribute(types.AttributeKeyNewConsPubKeyType, newPk.Type()),
+			sdk.NewAttribute(types.AttributeKeyOldConsAddr, oldConsAddr.String()),
+			sdk.NewAttribute(types.AttributeKeyNewConsAddr, newConsAddr.String()),
+		),
+	})
+
+	return &types.MsgRotateConsKeyResponse{}, nil
 }

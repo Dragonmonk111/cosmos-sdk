@@ -10,6 +10,7 @@ const (
 	EventTypeUnbond                    = "unbond"
 	EventTypeCancelUnbondingDelegation = "cancel_unbonding_delegation"
 	EventTypeRedelegate                = "redelegate"
+	EventTypeRotateConsKey             = "rotate_cons_key"
 
 	AttributeKeyValidator         = "validator"
 	AttributeKeyCommissionRate    = "commission_rate"
@@ -20,4 +21,7 @@ const (
 	AttributeKeyCreationHeight    = "creation_height"
 	AttributeKeyCompletionTime    = "completion_time"
 	AttributeKeyNewShares         = "new_shares"
+	AttributeKeyNewConsPubKeyType = "new_cons_pubkey_type"
+	AttributeKeyNewConsAddr       = "new_cons_addr"
+	AttributeKeyOldConsAddr       = "old_cons_addr"
 )
