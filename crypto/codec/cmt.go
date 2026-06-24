@@ -8,6 +8,7 @@ import (
 	"cosmossdk.io/errors"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	hybridconsensus "github.com/cosmos/cosmos-sdk/crypto/keys/hybrid_consensus"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -24,6 +25,10 @@ func FromCmtProtoPublicKey(protoPk cmtprotocrypto.PublicKey) (cryptotypes.PubKey
 		return &secp256k1.PubKey{
 			Key: protoPk.Secp256K1,
 		}, nil
+	case *cmtprotocrypto.PublicKey_AegisHybridEd25519Mldsa44:
+		key := make([]byte, len(protoPk.AegisHybridEd25519Mldsa44))
+		copy(key, protoPk.AegisHybridEd25519Mldsa44)
+		return &hybridconsensus.PubKey{Key: key}, nil
 	default:
 		return nil, errors.Wrapf(sdkerrors.ErrInvalidType, "cannot convert %v from Tendermint public key", protoPk)
 	}
@@ -42,6 +47,14 @@ func ToCmtProtoPublicKey(pk cryptotypes.PubKey) (cmtprotocrypto.PublicKey, error
 		return cmtprotocrypto.PublicKey{
 			Sum: &cmtprotocrypto.PublicKey_Secp256K1{
 				Secp256K1: pk.Key,
+			},
+		}, nil
+	case *hybridconsensus.PubKey:
+		key := make([]byte, len(pk.Key))
+		copy(key, pk.Key)
+		return cmtprotocrypto.PublicKey{
+			Sum: &cmtprotocrypto.PublicKey_AegisHybridEd25519Mldsa44{
+				AegisHybridEd25519Mldsa44: key,
 			},
 		}, nil
 	default:
