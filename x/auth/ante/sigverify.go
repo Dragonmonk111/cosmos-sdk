@@ -423,10 +423,10 @@ func (vscd ValidateSigCountDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, sim
 
 // MlDsa44VerifyGasCost is the gas charged for the ML-DSA-44 half of a hybrid
 // signature verification, on top of the existing secp256k1 cost. ML-DSA-44
-// verify is heavier than secp256k1 (~101us vs the classical cost); this value
-// is provisional and intended to be locked after on-chain measurement on a
-// devnet (Project Aegis ADR-007 §D3 / §5.1 bandwidth-vs-CPU model).
-const MlDsa44VerifyGasCost = 5000
+// verify is heavier than secp256k1 (~101us vs the classical cost). The value
+// is anchored to the measured pure-wasm verify cost (~270k gas on the Juno
+// bn254 devnet) and will be refined after a native-ante devnet benchmark.
+const MlDsa44VerifyGasCost = 300000
 
 // DefaultSigVerificationGasConsumer is the default implementation of SignatureVerificationGasConsumer. It consumes gas
 // for signature verification based upon the public key type. The cost is fetched from the given params and is matched
