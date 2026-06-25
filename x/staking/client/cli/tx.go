@@ -46,6 +46,7 @@ func NewTxCmd(valAddrCodec, ac address.Codec) *cobra.Command {
 	stakingTxCmd.AddCommand(
 		NewCreateValidatorCmd(valAddrCodec),
 		NewEditValidatorCmd(valAddrCodec),
+		NewRotateConsKeyCmd(),
 		NewDelegateCmd(valAddrCodec, ac),
 		NewRedelegateCmd(valAddrCodec, ac),
 		NewUnbondCmd(valAddrCodec, ac),
@@ -174,6 +175,55 @@ func NewEditValidatorCmd(ac address.Codec) *cobra.Command {
 	cmd.Flags().AddFlagSet(flagSetDescriptionEdit())
 	cmd.Flags().AddFlagSet(flagSetCommissionUpdate())
 	cmd.Flags().AddFlagSet(FlagSetMinSelfDelegation())
+	flags.AddTxFlagsToCmd(cmd)
+
+	return cmd
+}
+
+// NewRotateConsKeyCmd returns a CLI command handler for creating a MsgRotateConsKey
+// transaction. Project Aegis: this lets a validator rotate its consensus key to a
+// hybrid Ed25519+ML-DSA-44 key without recreating the validator.
+func NewRotateConsKeyCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rotate-cons-key [validator-address] [path-to-pubkey-json]",
+		Short: "Rotate a validator's consensus public key",
+		Long: strings.TrimSpace(fmt.Sprintf(`Rotate the consensus public key of an existing validator.
+The JSON file must contain the new pubkey as a single SDK Any, e.g.:
+
+{
+  "@type": "/cosmos.crypto.hybrid.PubKey",
+  "key": "<base64-secp33||mldsa1312>"
+}
+
+Example:
+$ %s tx staking rotate-cons-key cosmosvaloper1... ./new-hybrid-pubkey.json --from mykey
+`, version.AppName)),
+		Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			bz, err := os.ReadFile(args[1])
+			if err != nil {
+				return fmt.Errorf("failed to read pubkey file: %w", err)
+			}
+
+			var newPubKey cryptotypes.PubKey
+			if err := clientCtx.Codec.UnmarshalInterfaceJSON(bz, &newPubKey); err != nil {
+				return fmt.Errorf("failed to parse pubkey JSON: %w", err)
+			}
+
+			msg, err := types.NewMsgRotateConsKey(args[0], newPubKey)
+			if err != nil {
+				return err
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
 	flags.AddTxFlagsToCmd(cmd)
 
 	return cmd
