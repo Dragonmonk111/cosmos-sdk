@@ -1,6 +1,6 @@
 module cosmossdk.io/store
 
-go 1.22.11
+go 1.23.2
 
 require (
 	cosmossdk.io/errors v1.0.0
@@ -8,7 +8,7 @@ require (
 	cosmossdk.io/math v1.3.0
 	github.com/cometbft/cometbft v0.38.20
 	github.com/cosmos/cosmos-db v1.0.2
-	github.com/cosmos/gogoproto v1.7.0
+	github.com/cosmos/gogoproto v1.7.2
 	github.com/cosmos/iavl v1.2.0
 	github.com/cosmos/ics23/go v0.11.0
 	github.com/golang/mock v1.6.0
@@ -22,7 +22,7 @@ require (
 	github.com/tidwall/btree v1.7.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.10
 	gotest.tools/v3 v3.5.1
 )
 
@@ -44,7 +44,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.0.0 // indirect
 	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
@@ -70,10 +70,10 @@ require (
 	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
