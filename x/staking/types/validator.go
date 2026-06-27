@@ -60,6 +60,8 @@ func NewValidator(operator string, pubKey cryptotypes.PubKey, description Descri
 		Commission:              NewCommission(math.LegacyZeroDec(), math.LegacyZeroDec(), math.LegacyZeroDec()),
 		MinSelfDelegation:       math.OneInt(),
 		UnbondingOnHoldRefCount: 0,
+		ConsensusRotationHeight: 0,
+		ConsensusRotationTime:   time.Unix(0, 0).UTC(),
 	}, nil
 }
 

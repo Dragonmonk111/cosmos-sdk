@@ -1,6 +1,8 @@
 package keeper_test
 
 import (
+	"time"
+
 	"cosmossdk.io/math"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
@@ -66,6 +68,10 @@ func (s *KeeperTestSuite) TestMsgRotateConsKey() {
 		// Old consensus-address index entry is gone.
 		_, err = keeper.GetValidatorByConsAddr(ctx, oldConsAddr)
 		require.Error(err)
+
+		// Rotation metadata is recorded on the validator.
+		require.Equal(ctx.BlockHeight(), val.ConsensusRotationHeight)
+		require.True(ctx.BlockTime().Equal(val.ConsensusRotationTime))
 	})
 
 	s.Run("rotate to an already-used key", func() {
@@ -74,5 +80,35 @@ func (s *KeeperTestSuite) TestMsgRotateConsKey() {
 		require.NoError(err)
 		_, err = msgServer.RotateConsKey(ctx, msg)
 		require.Error(err)
+	})
+
+	thirdPk := ed25519.GenPrivKey().PubKey()
+	require.NotNil(thirdPk)
+	thirdConsAddr := sdk.ConsAddress(thirdPk.Address())
+
+	s.Run("second rotation within 24h is rejected", func() {
+		// Move only 1 hour forward; the previous rotation is still on cooldown.
+		shortCtx := ctx.WithBlockTime(ctx.BlockTime().Add(time.Hour))
+		shortCtx = shortCtx.WithBlockHeight(ctx.BlockHeight() + 100)
+		msg, err := stakingtypes.NewMsgRotateConsKey(ValAddr.String(), thirdPk)
+		require.NoError(err)
+		_, err = msgServer.RotateConsKey(shortCtx, msg)
+		require.Error(err)
+	})
+
+	s.Run("second rotation after 24h succeeds", func() {
+		// Move 24 hours + 1 second forward; the cooldown has elapsed.
+		laterCtx := ctx.WithBlockTime(ctx.BlockTime().Add(24*time.Hour + time.Second))
+		laterCtx = laterCtx.WithBlockHeight(ctx.BlockHeight() + 200)
+		msg, err := stakingtypes.NewMsgRotateConsKey(ValAddr.String(), thirdPk)
+		require.NoError(err)
+		_, err = msgServer.RotateConsKey(laterCtx, msg)
+		require.NoError(err)
+
+		val, err := keeper.GetValidatorByConsAddr(laterCtx, thirdConsAddr)
+		require.NoError(err)
+		require.Equal(ValAddr.String(), val.GetOperator())
+		require.Equal(laterCtx.BlockHeight(), val.ConsensusRotationHeight)
+		require.True(laterCtx.BlockTime().Equal(val.ConsensusRotationTime))
 	})
 }

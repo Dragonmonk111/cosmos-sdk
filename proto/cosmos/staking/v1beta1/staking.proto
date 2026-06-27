@@ -134,6 +134,21 @@ message Validator {
 
   // list of unbonding ids, each uniquely identifing an unbonding of this validator
   repeated uint64 unbonding_ids = 13;
+
+  // consensus_rotation_height records the block height at which the validator's
+  // consensus public key was last rotated. Zero means the validator has never
+  // rotated its consensus key.
+  //
+  // Since: cosmos-sdk 0.50 (Project Aegis F6)
+  int64 consensus_rotation_height = 14;
+
+  // consensus_rotation_time records the block time at which the validator's
+  // consensus public key was last rotated. Used to enforce the 24-hour
+  // cooldown between consecutive rotations.
+  //
+  // Since: cosmos-sdk 0.50 (Project Aegis F6)
+  google.protobuf.Timestamp consensus_rotation_time = 15
+      [(gogoproto.nullable) = false, (amino.dont_omitempty) = true, (gogoproto.stdtime) = true];
 }
 
 // BondStatus is the status of a validator.

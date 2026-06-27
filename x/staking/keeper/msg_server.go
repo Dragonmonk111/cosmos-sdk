@@ -665,6 +665,22 @@ func (k msgServer) RotateConsKey(ctx context.Context, msg *types.MsgRotateConsKe
 		}
 	}
 
+	// Project Aegis F6: enforce a 24-hour cooldown between consecutive consensus-key
+	// rotations for the same validator. This prevents rapid rotation attacks and
+	// gives operators / block producers time to observe the new key.
+	const rotationCooldown = 24 * time.Hour
+	const rotationTimeSentinel = int64(0)
+	if !validator.ConsensusRotationTime.Equal(time.Unix(rotationTimeSentinel, 0).UTC()) {
+		if sdkCtx.BlockTime().Before(validator.ConsensusRotationTime.Add(rotationCooldown)) {
+			return nil, errorsmod.Wrapf(
+				types.ErrValidatorRotationRateLimit,
+				"last rotation at height %d, time %s; next rotation allowed after %s",
+				validator.ConsensusRotationHeight, validator.ConsensusRotationTime.UTC().Format(time.RFC3339),
+				validator.ConsensusRotationTime.Add(rotationCooldown).UTC().Format(time.RFC3339),
+			)
+		}
+	}
+
 	// Old consensus address, for index cleanup and the emitted event.
 	oldConsBz, err := validator.GetConsAddr()
 	if err != nil {
@@ -684,6 +700,11 @@ func (k msgServer) RotateConsKey(ctx context.Context, msg *types.MsgRotateConsKe
 	}
 
 	validator.ConsensusPubkey = pkAny
+
+	// Project Aegis F6: record the height and block time of this rotation so
+	// future rotations are rate-limited.
+	validator.ConsensusRotationHeight = sdkCtx.BlockHeight()
+	validator.ConsensusRotationTime = sdkCtx.BlockTime()
 
 	if err := k.SetValidator(ctx, validator); err != nil {
 		return nil, err
