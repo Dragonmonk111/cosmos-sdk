@@ -4,7 +4,7 @@ toolchain go1.24.4
 
 module github.com/cosmos/cosmos-sdk
 
-replace github.com/cometbft/cometbft => github.com/Dragonmonk111/cometbft v0.0.0-20260624160857-7524f93b98c7
+replace github.com/cometbft/cometbft => github.com/Dragonmonk111/cometbft v0.0.0-20260627203244-ff4dcefdc083
 
 require (
 	cosmossdk.io/api v0.7.6

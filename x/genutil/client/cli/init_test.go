@@ -93,6 +93,39 @@ func TestInitCmd(t *testing.T) {
 	}
 }
 
+func TestInitCmdHybridConsensus(t *testing.T) {
+	home := t.TempDir()
+	logger := log.NewNopLogger()
+	cfg, err := genutiltest.CreateDefaultCometConfig(home)
+	require.NoError(t, err)
+
+	serverCtx := server.NewContext(viper.New(), cfg, logger)
+	interfaceRegistry := types.NewInterfaceRegistry()
+	marshaler := codec.NewProtoCodec(interfaceRegistry)
+	clientCtx := client.Context{}.
+		WithCodec(marshaler).
+		WithLegacyAmino(makeCodec()).
+		WithHomeDir(home)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, client.ClientContextKey, &clientCtx)
+	ctx = context.WithValue(ctx, server.ServerContextKey, serverCtx)
+
+	cmd := genutilcli.InitCmd(testMbm, home)
+	cmd.SetArgs([]string{
+		"appnode-test",
+		fmt.Sprintf("--%s=true", genutilcli.FlagAegisHybridConsensus),
+	})
+	require.NoError(t, cmd.ExecuteContext(ctx))
+
+	// The classical priv_validator_key.json must still exist (migration invariant)
+	// and the ML-DSA-44 sidecar must be written alongside it.
+	_, err = os.Stat(cfg.PrivValidatorKeyFile())
+	require.NoError(t, err, "classical priv_validator_key.json must exist")
+	_, err = os.Stat(cfg.PrivValidatorKeyFile() + "_mldsa44.json")
+	require.NoError(t, err, "ML-DSA-44 sidecar must be written for --aegis-hybrid-consensus")
+}
+
 func TestInitRecover(t *testing.T) {
 	home := t.TempDir()
 	logger := log.NewNopLogger()
@@ -237,7 +270,7 @@ func TestInitNodeValidatorFiles(t *testing.T) {
 	cfg, err := genutiltest.CreateDefaultCometConfig(home)
 	require.NoError(t, err)
 
-	nodeID, valPubKey, err := genutil.InitializeNodeValidatorFiles(cfg)
+	nodeID, valPubKey, err := genutil.InitializeNodeValidatorFiles(cfg, false)
 	require.NoError(t, err)
 
 	require.NotEqual(t, "", nodeID)

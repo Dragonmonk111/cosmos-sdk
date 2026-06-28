@@ -65,7 +65,7 @@ $ %s gentx my-key-name 1000000stake --home=/path/to/home/dir --keyring-backend=o
 			config := serverCtx.Config
 			config.SetRoot(clientCtx.HomeDir)
 
-			nodeID, valPubKey, err := genutil.InitializeNodeValidatorFiles(serverCtx.Config)
+			nodeID, valPubKey, err := genutil.InitializeNodeValidatorFiles(serverCtx.Config, false)
 			if err != nil {
 				return errors.Wrap(err, "failed to initialize node validator files")
 			}

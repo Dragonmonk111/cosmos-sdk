@@ -35,6 +35,11 @@ const (
 
 	// FlagDefaultBondDenom defines the default denom to use in the genesis file.
 	FlagDefaultBondDenom = "default-denom"
+
+	// FlagAegisHybridConsensus initializes the validator consensus key as a
+	// hybrid Ed25519 + ML-DSA-44 key (Project Aegis). Without this flag the
+	// classical Ed25519 consensus key is used.
+	FlagAegisHybridConsensus = "aegis-hybrid-consensus"
 )
 
 type printInfo struct {
@@ -113,7 +118,8 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 				initHeight = 1
 			}
 
-			nodeID, _, err := genutil.InitializeNodeValidatorFilesFromMnemonic(config, mnemonic)
+			hybrid, _ := cmd.Flags().GetBool(FlagAegisHybridConsensus)
+			nodeID, _, err := genutil.InitializeNodeValidatorFilesFromMnemonic(config, mnemonic, hybrid)
 			if err != nil {
 				return err
 			}
@@ -179,6 +185,7 @@ func InitCmd(mbm module.BasicManager, defaultNodeHome string) *cobra.Command {
 	cmd.Flags().String(flags.FlagChainID, "", "genesis file chain-id, if left blank will be randomly created")
 	cmd.Flags().String(FlagDefaultBondDenom, "", "genesis file default denomination, if left blank default value is 'stake'")
 	cmd.Flags().Int64(flags.FlagInitHeight, 1, "specify the initial block height at genesis")
+	cmd.Flags().Bool(FlagAegisHybridConsensus, false, "initialize the validator consensus key as a hybrid Ed25519 + ML-DSA-44 key (Project Aegis)")
 
 	return cmd
 }

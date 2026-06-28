@@ -460,7 +460,7 @@ func New(l Logger, baseDir string, cfg Config) (*Network, error) {
 		cmtCfg.P2P.AddrBookStrict = false
 		cmtCfg.P2P.AllowDuplicateIP = true
 
-		nodeID, pubKey, err := genutil.InitializeNodeValidatorFiles(cmtCfg)
+		nodeID, pubKey, err := genutil.InitializeNodeValidatorFiles(cmtCfg, false)
 		if err != nil {
 			return nil, err
 		}
