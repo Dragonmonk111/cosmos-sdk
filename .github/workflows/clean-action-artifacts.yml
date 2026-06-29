@@ -7,6 +7,10 @@ on:
 
 jobs:
   remove-old-artifacts:
+    # Aegis fork: skip on forks. This inherited upstream housekeeping job needs
+    # artifact-deletion permissions a fork does not grant, so it fails CI on
+    # aegis-phase-d3-hybrid. Runs only on the canonical cosmos-sdk repo.
+    if: github.repository == 'cosmos/cosmos-sdk'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
